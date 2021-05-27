@@ -6,17 +6,19 @@ rd=lambda x:(random.choice(list(range(100)))<x)
 s_time=[2,4,8,16,999999]
 _q=[list(),]*len(s_time)
 
+NT='NEXIST'
+RD='READY'
+RUN='RUNNING'
 IO='WAITING'
 END='DONE'
-RUN='RUNNING'
-RD='READY'
-NT='NEXIST'
+BG='begin'
 
 _process_example={
 	'name':'EXIT',
 	'id':0,
 	'total':0,
 	'wait':0,
+	'err':0,
 	'+io':0,
 	'-io':50,
 	'surplus':0,
@@ -29,17 +31,25 @@ def process_maker()->list:
 		_a={
 			'name':'p'+str(i+1),
 			'id':100+i+1,
-			'total':10,
-			'+io':30,
+			'total':20,
+			'+io':40,
 			'-io':10,
 		}
 		_process.append(_a)
-	for i in range(5):
+	for i in range(5,10):
 		_a={
-			'name':'p'+str(i+6),
-			'id':200+i+6,
-			'total':20,
-			'wait':i,
+			'name':'p'+str(i+1),
+			'id':200+i+1,
+			'total':10,
+			'wait':(i+1)*10,
+		}
+		_process.append(_a)
+	for i in range(10,15):
+		_a={
+			'name':'p'+str(i+1),
+			'id':300+i+1,
+			'total':40,
+			'err':3,
 		}
 		_process.append(_a)
 	return _process
@@ -56,6 +66,7 @@ for i in _l:
 	u(i,'surplus',i['total'])
 	u(i,'total',20)
 	u(i,'wait',0)
+	u(i,'err',0)
 	u(i,'+io',0)
 	u(i,'-io',50)
 	if i['wait']:
@@ -92,7 +103,7 @@ def clk(p:dict=None,lv:int=0):
 	if p:
 		if rd(p['+io']):
 			p['state']=IO
-		if p['surplus']==1:
+		if p['surplus']==1 or rd(p['err']):
 			p['state']=END
 
 		l=[_clk,lv,p['name']+'_'+str(p['total']-p['surplus']+1),'True' if p['state']==IO else '']+[RUN if i==p else (RD if isinstance(i['state'],int) else i['state']) for i in _l]
@@ -137,6 +148,8 @@ def run():
 
 bg()
 while run():None
+clk()
+clk()
 clk()
 
 

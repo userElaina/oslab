@@ -6,9 +6,24 @@ from copy import deepcopy as dcp
 import downs
 
 _lg='out1.csv'
-rd=lambda x:(random.choice(list(range(100)))<x)
+rd=lambda x:(random.choice(list(range(100)))<abs(x))
 open(_lg,'wb')
 
+_other_1=False
+_other_2=False
+_other_3=False
+_other_4=False
+_other_5=True
+_other_6=False
+
+if _other_2:
+	_key=lambda i:i['total']
+if _other_3:
+	_key=lambda i:i['remain']
+if _other_4:
+	_key=lambda i:1+(_clk-i['wait']+1)/i['total']
+if _other_5:
+	_key=lambda i:i['other']
 
 def pt(x:str):
 	print(x)
@@ -60,7 +75,7 @@ RD='READY'
 RUN='RUNNING'
 IO='WAITING'
 END='DONE'
-BG='begin'
+BG='background'
 
 col={
 	BG:'#ffffff',
@@ -77,9 +92,10 @@ _process_example={
 	'total':0,
 	'wait':0,
 	'err':0,
+        'other':0,
 	'+io':0,
 	'-io':50,
-	'surplus':0,
+	'remain':0,
 	'state':END,
 }
 
@@ -114,7 +130,11 @@ def process_maker()->list:
 	return _process
 
 _l=process_maker()
-s_time=[2,4,8,16,999999]
+s_time=[2,4,8,16,99]
+if _other_1 or _other_2 or _other_3 or _other_4 or _other_5:
+	s_time=[999999,999999,999999,999999,999999]
+if _other_6:
+	s_time=[4,4,4,4,4,]
 _q=[list() for i in s_time]
 _len=len(_l)
 
@@ -130,7 +150,20 @@ ny=(_len-1)//nx+1
 
 t=tk.Tk()
 t.geometry(str(dpix)+'x'+str(dpiy)+'+0+0')
-t.title('Feed-Back')
+if _other_1:
+        t.title('First Come First Serve')
+elif _other_2:
+        t.title('Shortest Job First')
+elif _other_3:
+        t.title('Shortest Remaining Time Next')
+elif _other_4:
+        t.title('Highest Response Ratio Next')
+elif _other_5:
+        t.title('Highest Possible Frequency')
+elif _other_6:
+        t.title('Round Robin')
+else:
+        t.title('Feed-Back')
 # t.iconbitmap('1.png')
 tt=tk.Frame(
 	t,
@@ -187,7 +220,7 @@ for k in range(len(s_time)+1):
 		y=nwy,
 		text=('等待队列:')
 			if k==len(s_time) else 
-				('进程队列'+str(k+1)+'('+str(s_time[k])+'):'),
+				('进程队列'+str(k+1)+':'),
 		bg=col[BG],
 	)
 	nwy+=ptitle+pd
@@ -229,7 +262,7 @@ def run():
 			break
 	
 	if isinstance(p['state'],int):
-		if not flg_ct:
+		if not flg_ct and not _other_6:
 			p['state']+=1
 		_q[p['state']].append(p)
 
@@ -263,13 +296,14 @@ def bg():
 	for _i in range(_len):
 		i=_l[_i]
 		i['state']=NT
-		u(i,'surplus',i['total'])
+		u(i,'remain',i['total'])
 		u(i,'total',20)
 		u(i,'wait',0)
 		u(i,'err',0)
+		u(i,'other',0)
 		u(i,'+io',0)
 		u(i,'-io',50)
-		if i['wait']:
+		if i['wait']!=0:
 			continue
 		i['state']=0
 
@@ -324,12 +358,12 @@ def clk(p:dict=None,lv:int=0):
 	if p:
 		if rd(p['+io']):
 			p['state']=IO
-		if p['surplus']==1 or rd(p['err']):
+		if p['remain']==1 or rd(p['err']):
 			p['state']=END
 		l=[
 			_clk,
 			lv,
-			p['name']+'_'+str(p['total']-p['surplus']+1),
+			p['name']+'_'+str(p['total']-p['remain']+1),
 			'True' if p['state']==IO else ''
 		]+[
 			RUN if i==p else (
@@ -357,7 +391,7 @@ def clk(p:dict=None,lv:int=0):
 				RD if isinstance(i['state'],int) else i['state']
 		)]
 		bts[_i]['activebackground']=bts[_i]['bg']
-		bts[_i]['text']=i['name']+'\n'+str(i['surplus'])+'/'+str(i['total'])
+		bts[_i]['text']=i['name']+'\n'+str(i['remain'])+'/'+str(i['total'])
 	
 	for _i in range(len(_q)):
 		i=_q[_i]
@@ -374,9 +408,16 @@ def clk(p:dict=None,lv:int=0):
 	
 	_waits=ckio(p)
 	for i in _l:
-		if i['wait']==_clk:
+		if i['state']!=NT:
+			continue
+		if i['wait']==_clk or (i['wait']<0 and rd(i['wait'])):
 			i['state']=0
 			_q[0].append(i)
+
+	if _other_2 or _other_3 or _other_4 or _other_5:
+		for i in _q:
+			i.sort(key=_key)
+
 
 	for _j in range(nx):
 		_k=(len(s_time)+1)*nx+_j
@@ -391,7 +432,7 @@ def clk(p:dict=None,lv:int=0):
 	
 	bt_tm['text']=str(_clk)
 
-	p['surplus']-=1
+	p['remain']-=1
 	flg_wait=True
 	_clk+=1
 
